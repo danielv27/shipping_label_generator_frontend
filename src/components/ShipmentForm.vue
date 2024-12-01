@@ -67,7 +67,7 @@
                 <h3 class="text-lg font-medium">Shipment Information</h3>
                 <div class="flex items-center gap-2">
                     <InputText name="weight" type="number" placeholder="Weight" fluid />
-                    <Dropdown name="weight_unit" :options="weightUnits" option-label="label" option-value="value"
+                    <Select name="weight_unit" :options="weightUnits" option-label="label" option-value="value"
                         placeholder="Unit" />
                 </div>
                 <Message v-if="$form['weight']?.invalid" severity="error" size="small" variant="simple">
@@ -86,27 +86,27 @@ import { defineEmits } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { Form } from '@primevue/forms';
 import InputText from 'primevue/inputtext';
-import Dropdown from 'primevue/dropdown';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Toast from 'primevue/toast';
+import Select from 'primevue/select';
 
 const emit = defineEmits(['calculatePrice']);
 
 const toast = useToast();
 
 interface ShipmentFormData {
-    sender_name: string;
-    sender_street: string;
-    sender_postal_code: string;
-    sender_city: string;
-    sender_country: string;
-    receiver_name: string;
-    receiver_street: string;
-    receiver_postal_code: string;
-    receiver_city: string;
-    receiver_country: string;
-    weight: number | string; // Could be number or string based on input
+    sender_name?: string;
+    sender_street?: string;
+    sender_postal_code?: string;
+    sender_city?: string;
+    sender_country?: string;
+    receiver_name?: string;
+    receiver_street?: string;
+    receiver_postal_code?: string;
+    receiver_city?: string;
+    receiver_country?: string;
+    weight?: number | string; // Could be number or string based on input
     weight_unit: string;
 }
 
@@ -122,17 +122,20 @@ const initialValues: ShipmentFormData = {
     receiver_city: '',
     receiver_country: '',
     weight: '',
-    weight_unit: 'kg',
+    weight_unit: 'kg', // Default value
 };
+
 
 const weightUnits = [
     { label: 'Kilograms (kg)', value: 'kg' },
     { label: 'Grams (g)', value: 'g' },
 ];
 
+
 type Errors = Partial<Record<keyof ShipmentFormData, { message: string }[]>>;
 
 const resolver = ({ values }) => {
+
     const errors: Errors = {};
 
     // Sender validations
@@ -143,7 +146,7 @@ const resolver = ({ values }) => {
     if (!values.sender_country) errors.sender_country = [{ message: 'Sender country is required.' }];
 
     // Receiver validations
-    if (!values.reciever_name) errors.receiver_name = [{ message: 'Receiver name is required.' }];
+    if (!values.receiver_name) errors.receiver_name = [{ message: 'Receiver name is required.' }];
     if (!values.receiver_street) errors.receiver_street = [{ message: 'Receiver street is required.' }];
     if (!values.receiver_postal_code) errors.receiver_postal_code = [{ message: 'Receiver postal code is required.' }];
     if (!values.receiver_city) errors.receiver_city = [{ message: 'Receiver city is required.' }];
@@ -153,22 +156,19 @@ const resolver = ({ values }) => {
     if (!values.weight || values.weight <= 0) {
         errors.weight = [{ message: 'Weight is required.' }];
     }
-
+    if (values.weight && values.weight <= 0) {
+        errors.weight = [{ message: 'Weight must be positive.' }];
+    }
     return { errors };
 };
 
-const onFormSubmit = ({ valid, values }) => {
+const onFormSubmit = ({ states, valid }) => {
     if (valid) {
-        if (values.weight_unit === 'g') {
-            values.weight = values.weight / 1000;
-            values.weight_unit = 'kg';
-        }
-        emit('calculatePrice', values);
         toast.add({
             severity: 'success',
             summary: 'Details submitted.',
             life: 3000,
         });
     }
-};
+}
 </script>

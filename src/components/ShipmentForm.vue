@@ -26,7 +26,16 @@
                     {{ $form['sender_city'].error?.message }}
                 </Message>
 
-                <InputText name="sender_country" type="text" placeholder="Country" fluid />
+                <Select v-model="senderCountry" filter :options="countryOptions" name="sender_country"
+                    placeholder="Country" option-label="label" option-value="value">
+
+                    <template #option="slotProps">
+                        <div class="flex items-center">
+                            <span :class="`fi fi-${slotProps.option.value.toLowerCase()} mr-2`"></span>
+                            <div>{{ slotProps.option.label }}</div>
+                        </div>
+                    </template>
+                </Select>
                 <Message v-if="$form['sender_country']?.invalid" severity="error" size="small" variant="simple">
                     {{ $form['sender_country'].error?.message }}
                 </Message>
@@ -55,8 +64,15 @@
                 <Message v-if="$form['receiver_city']?.invalid" severity="error" size="small" variant="simple">
                     {{ $form['receiver_city'].error?.message }}
                 </Message>
-
-                <InputText name="receiver_country" type="text" placeholder="Country" fluid />
+                <Select v-model="receiverCountry" filter :options="countryOptions" name="receiver_country"
+                    placeholder="Country" option-label="label" option-value="value">
+                    <template #option="slotProps">
+                        <div class="flex items-center">
+                            <span :class="`fi fi-${slotProps.option.value.toLowerCase()} mr-2`"></span>
+                            <div>{{ slotProps.option.label }}</div>
+                        </div>
+                    </template>
+                </Select>
                 <Message v-if="$form['receiver_country']?.invalid" severity="error" size="small" variant="simple">
                     {{ $form['receiver_country'].error?.message }}
                 </Message>
@@ -65,6 +81,8 @@
             <!-- Shipment Information -->
             <div class="flex flex-col gap-1">
                 <h3 class="text-lg font-medium">Shipment Information</h3>
+                <Select name="weight_unit" :options="carrierServiceOptions" option-label="label" option-value="value"
+                    placeholder="Carrier Service" />
                 <div class="flex items-center gap-2">
                     <InputText name="weight" type="number" placeholder="Weight" fluid />
                     <Select name="weight_unit" :options="weightUnits" option-label="label" option-value="value"
@@ -82,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits } from 'vue';
+import { defineEmits, ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { Form } from '@primevue/forms';
 import InputText from 'primevue/inputtext';
@@ -126,16 +144,63 @@ const initialValues: ShipmentFormData = {
 };
 
 
+const countryOptions = ref([]);
+const carrierServiceOptions = ref([]);
+
+const senderCountry = ref('');
+const receiverCountry = ref('');
+
+function errorToast() {
+    toast.add({
+        severity: 'error',
+        summary: 'Something went wrong.',
+        life: 3000,
+    });
+}
+
+async function getCountryOptions() {
+    try {
+        const res = await fetch('http://localhost:8000/api/countries');
+        if (res.ok) {
+            const data = await res.json();
+            countryOptions.value = data.map(({ name, code }) => ({ label: name, value: code }))
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+        errorToast();
+    }
+}
+
+getCountryOptions();
+
+watch([senderCountry, receiverCountry], async (senderCountryValue, receiverCountryValue) => {
+    // If no errors were found, all details are filled in
+    if (senderCountryValue && receiverCountryValue) {
+        try {
+            const res = await fetch('http://localhost:8000/api/carrier-services');
+            if (res.ok) {
+                const data = await res.json();
+                carrierServiceOptions.value = data.map(({ name, id }) => ({ label: name, value: id }));
+            } else {
+                console.error('Error fetching carrier services:', res.status);
+                errorToast();
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            errorToast();
+        }
+    }
+});
+
+
+
 const weightUnits = [
     { label: 'Kilograms (kg)', value: 'kg' },
     { label: 'Grams (g)', value: 'g' },
 ];
 
-
-type Errors = Partial<Record<keyof ShipmentFormData, { message: string }[]>>;
-
-const resolver = ({ values }) => {
-
+const resolver = async ({ values }) => {
+    type Errors = Partial<Record<keyof ShipmentFormData, { message: string }[]>>;
     const errors: Errors = {};
 
     // Sender validations
@@ -153,7 +218,7 @@ const resolver = ({ values }) => {
     if (!values.receiver_country) errors.receiver_country = [{ message: 'Receiver country is required.' }];
 
     // Shipment validations
-    if (!values.weight || values.weight <= 0) {
+    if (!values.weight) {
         errors.weight = [{ message: 'Weight is required.' }];
     }
     if (values.weight && values.weight <= 0) {

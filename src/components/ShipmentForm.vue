@@ -81,8 +81,11 @@
             <!-- Shipment Information -->
             <div class="flex flex-col gap-1">
                 <h3 class="text-lg font-medium">Shipment Information</h3>
-                <Select name="weight_unit" :options="carrierServiceOptions" option-label="label" option-value="value"
-                    placeholder="Carrier Service" />
+                <Select name="carrier_service_id" :options="carrierServiceOptions" :disabled="carrierFieldDisabled"
+                    option-label="label" option-value="value" placeholder="Carrier Service" />
+                <Message v-if="$form['carrier_service_id']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['carrier_service_id'].error?.message }}
+                </Message>
                 <div class="flex items-center gap-2">
                     <InputText name="weight" type="number" placeholder="Weight" fluid />
                     <Select name="weight_unit" :options="weightUnits" option-label="label" option-value="value"
@@ -100,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits, ref, watch } from 'vue';
+import { computed, defineEmits, ref, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { Form } from '@primevue/forms';
 import InputText from 'primevue/inputtext';
@@ -124,7 +127,8 @@ interface ShipmentFormData {
     receiver_postal_code?: string;
     receiver_city?: string;
     receiver_country?: string;
-    weight?: number | string; // Could be number or string based on input
+    weight?: number | string;
+    carrier_service_id: string;
     weight_unit: string;
 }
 
@@ -140,6 +144,7 @@ const initialValues: ShipmentFormData = {
     receiver_city: '',
     receiver_country: '',
     weight: '',
+    carrier_service_id: '',
     weight_unit: 'kg', // Default value
 };
 
@@ -147,8 +152,11 @@ const initialValues: ShipmentFormData = {
 const countryOptions = ref([]);
 const carrierServiceOptions = ref([]);
 
+
 const senderCountry = ref('');
 const receiverCountry = ref('');
+
+const carrierFieldDisabled = computed(() => Boolean(!senderCountry.value || !receiverCountry.value));
 
 function errorToast() {
     toast.add({
@@ -163,7 +171,7 @@ async function getCountryOptions() {
         const res = await fetch('http://localhost:8000/api/countries');
         if (res.ok) {
             const data = await res.json();
-            countryOptions.value = data.map(({ name, code }) => ({ label: name, value: code }))
+            countryOptions.value = data.map(({ name, code }) => ({ label: name, value: code }));
         }
     } catch (error) {
         console.error('Fetch error:', error);
@@ -219,6 +227,10 @@ const resolver = async ({ values }) => {
     if (!values.receiver_country) errors.receiver_country = [{ message: 'Receiver country is required.' }];
 
     // Shipment validations
+    if (!values.carrier_service_id) {
+        errors.carrier_service_id = [{ message: 'Carrier Service is required. ' + (carrierFieldDisabled.value ? 'Fill in source and destination adresses first' : '') }];
+    }
+
     if (!values.weight) {
         errors.weight = [{ message: 'Weight is required.' }];
     }

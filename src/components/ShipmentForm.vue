@@ -1,35 +1,34 @@
 <template>
-    <div class="card flex flex-col gap-4 w-full sm:w-96 p-4">
+    <div class="card flex flex-col gap-4 w-full p-4">
         <Toast />
-        <Form v-slot="$form" :initialValues="initialValues" :resolver="resolver" @submit="onFormSubmit"
-            class="flex flex-col gap-6">
+        <Form v-slot="$form" :initialValues :resolver @submit="onFormSubmit" class="flex flex-col gap-6">
             <!-- Sender Information -->
             <div class="flex flex-col gap-1">
                 <h3 class="text-lg font-medium">Sender Information</h3>
 
                 <InputText name="sender_name" type="text" placeholder="Full Name" fluid />
-                <Message v-if="$form.sender_name?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.sender_name.error?.message }}
+                <Message v-if="$form['sender_name']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['sender_name'].error?.message }}
                 </Message>
 
                 <InputText name="sender_street" type="text" placeholder="Street" fluid />
-                <Message v-if="$form.sender_street?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.sender_street.error?.message }}
+                <Message v-if="$form['sender_street']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['sender_street'].error?.message }}
                 </Message>
 
                 <InputText name="sender_postal_code" type="text" placeholder="Postal Code" fluid />
-                <Message v-if="$form.sender_postal_code?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.sender_postal_code.error?.message }}
+                <Message v-if="$form['sender_postal_code']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['sender_postal_code'].error?.message }}
                 </Message>
 
                 <InputText name="sender_city" type="text" placeholder="City" fluid />
-                <Message v-if="$form.sender_city?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.sender_city.error?.message }}
+                <Message v-if="$form['sender_city']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['sender_city'].error?.message }}
                 </Message>
 
                 <InputText name="sender_country" type="text" placeholder="Country" fluid />
-                <Message v-if="$form.sender_country?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.sender_country.error?.message }}
+                <Message v-if="$form['sender_country']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['sender_country'].error?.message }}
                 </Message>
             </div>
 
@@ -38,28 +37,28 @@
                 <h3 class="text-lg font-medium">Receiver Information</h3>
 
                 <InputText name="receiver_name" type="text" placeholder="Full Name" fluid />
-                <Message v-if="$form.receiver_name?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.receiver_name.error?.message }}
+                <Message v-if="$form['receiver_name']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['receiver_name'].error?.message }}
                 </Message>
 
                 <InputText name="receiver_street" type="text" placeholder="Street" fluid />
-                <Message v-if="$form.receiver_street?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.receiver_street.error?.message }}
+                <Message v-if="$form['receiver_street']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['receiver_street'].error?.message }}
                 </Message>
 
                 <InputText name="receiver_postal_code" type="text" placeholder="Postal Code" fluid />
-                <Message v-if="$form.receiver_postal_code?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.receiver_postal_code.error?.message }}
+                <Message v-if="$form['receiver_postal_code']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['receiver_postal_code'].error?.message }}
                 </Message>
 
                 <InputText name="receiver_city" type="text" placeholder="City" fluid />
-                <Message v-if="$form.receiver_city?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.receiver_city.error?.message }}
+                <Message v-if="$form['receiver_city']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['receiver_city'].error?.message }}
                 </Message>
 
                 <InputText name="receiver_country" type="text" placeholder="Country" fluid />
-                <Message v-if="$form.receiver_country?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.receiver_country.error?.message }}
+                <Message v-if="$form['receiver_country']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['receiver_country'].error?.message }}
                 </Message>
             </div>
 
@@ -71,8 +70,8 @@
                     <Dropdown name="weight_unit" :options="weightUnits" option-label="label" option-value="value"
                         placeholder="Unit" />
                 </div>
-                <Message v-if="$form.weight?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form.weight.error?.message }}
+                <Message v-if="$form['weight']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['weight'].error?.message }}
                 </Message>
             </div>
 
@@ -83,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, defineEmits } from 'vue';
+import { defineEmits } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { Form } from '@primevue/forms';
 import InputText from 'primevue/inputtext';
@@ -96,26 +95,45 @@ const emit = defineEmits(['calculatePrice']);
 
 const toast = useToast();
 
-const initialValues = reactive({
+interface ShipmentFormData {
+    sender_name: string;
+    sender_street: string;
+    sender_postal_code: string;
+    sender_city: string;
+    sender_country: string;
+    receiver_name: string;
+    receiver_street: string;
+    receiver_postal_code: string;
+    receiver_city: string;
+    receiver_country: string;
+    weight: number | string; // Could be number or string based on input
+    weight_unit: string;
+}
+
+const initialValues: ShipmentFormData = {
+    sender_name: '',
     sender_street: '',
     sender_postal_code: '',
     sender_city: '',
     sender_country: '',
+    receiver_name: '',
     receiver_street: '',
     receiver_postal_code: '',
     receiver_city: '',
     receiver_country: '',
     weight: '',
     weight_unit: 'kg',
-});
+};
 
 const weightUnits = [
     { label: 'Kilograms (kg)', value: 'kg' },
     { label: 'Grams (g)', value: 'g' },
 ];
 
+type Errors = Partial<Record<keyof ShipmentFormData, { message: string }[]>>;
+
 const resolver = ({ values }) => {
-    const errors = {};
+    const errors: Errors = {};
 
     // Sender validations
     if (!values.sender_name) errors.sender_name = [{ message: 'Sender name is required.' }];

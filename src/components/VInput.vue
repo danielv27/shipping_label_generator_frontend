@@ -18,7 +18,7 @@
     placeholder?: string
   }
   
-  const { name, type = text, placeholder } = defineProps<Props>();
-  
+  const { name, type = 'text', placeholder } = defineProps<Props>();
+
   </script>
   

@@ -173,11 +173,12 @@ async function getCountryOptions() {
 
 getCountryOptions();
 
-watch([senderCountry, receiverCountry], async (senderCountryValue, receiverCountryValue) => {
-    // If no errors were found, all details are filled in
-    if (senderCountryValue && receiverCountryValue) {
+watch([senderCountry, receiverCountry], async ([senderCountryCode, receiverCountryCode]) => {
+    if (senderCountryCode && receiverCountryCode) {
+
+        const urlParams = `source_country_code=${senderCountryCode}&destination_country_code=${receiverCountryCode}`;
         try {
-            const res = await fetch('http://localhost:8000/api/carrier-services');
+            const res = await fetch(`http://localhost:8000/api/carrier-services?${urlParams}`);
             if (res.ok) {
                 const data = await res.json();
                 carrierServiceOptions.value = data.map(({ name, id }) => ({ label: name, value: id }));

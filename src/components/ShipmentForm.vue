@@ -96,7 +96,7 @@
                     {{ $form['weight'].error?.message }}
                 </Message>
             </div>
-            <div v-if="price">Price is: {{ price }}</div>
+            <div class="text-center text-xl" v-if="price">This shipment will cost {{ price }}€</div>
 
             <!-- Submit Button -->
             <Button type="submit" severity="primary" label="Generate Label" />

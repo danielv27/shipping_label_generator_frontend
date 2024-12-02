@@ -1,7 +1,7 @@
 <template>
     <div class="card flex flex-col gap-4 w-full p-4">
         <Toast />
-        <Form v-slot="$form" :initialValues :resolver @submit="onFormSubmit" class="flex flex-col gap-6">
+        <Form v-slot="$form" :resolver @submit="onFormSubmit" class="flex flex-col gap-6">
             <!-- Sender Information -->
             <div class="flex flex-col gap-1">
                 <h3 class="text-lg font-medium">Sender Information</h3>
@@ -81,23 +81,25 @@
             <!-- Shipment Information -->
             <div class="flex flex-col gap-1">
                 <h3 class="text-lg font-medium">Shipment Information</h3>
-                <Select name="carrier_service_id" :options="carrierServiceOptions" :disabled="carrierFieldDisabled"
-                    option-label="label" option-value="value" placeholder="Carrier Service" />
+                <Select v-model="carrierService" name="carrier_service_id" :options="carrierServiceOptions"
+                    :disabled="carrierFieldDisabled" option-label="label" option-value="value"
+                    placeholder="Carrier Service" />
                 <Message v-if="$form['carrier_service_id']?.invalid" severity="error" size="small" variant="simple">
                     {{ $form['carrier_service_id'].error?.message }}
                 </Message>
                 <div class="flex items-center gap-2">
-                    <InputText name="weight" type="number" placeholder="Weight" fluid />
-                    <Select name="weight_unit" :options="weightUnits" option-label="label" option-value="value"
-                        placeholder="Unit" />
+                    <InputText v-model="weight" name="weight" type="number" placeholder="Weight" fluid />
+                    <Select v-model="weightUnit" name="weight_unit" :options="weightUnits" option-label="label"
+                        option-value="value" placeholder="Unit" />
                 </div>
                 <Message v-if="$form['weight']?.invalid" severity="error" size="small" variant="simple">
                     {{ $form['weight'].error?.message }}
                 </Message>
             </div>
+            <div v-if="price">Price is: {{ price }}</div>
 
             <!-- Submit Button -->
-            <Button type="submit" severity="primary" label="Calculate Price" />
+            <Button type="submit" severity="primary" label="Generate Label" />
         </Form>
     </div>
 </template>
@@ -111,50 +113,22 @@ import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Toast from 'primevue/toast';
 import Select from 'primevue/select';
+import { debounce } from 'lodash';
 
 const emit = defineEmits(['calculatePrice']);
 
 const toast = useToast();
 
-interface ShipmentFormData {
-    sender_name?: string;
-    sender_street?: string;
-    sender_postal_code?: string;
-    sender_city?: string;
-    sender_country?: string;
-    receiver_name?: string;
-    receiver_street?: string;
-    receiver_postal_code?: string;
-    receiver_city?: string;
-    receiver_country?: string;
-    weight?: number | string;
-    carrier_service_id: string;
-    weight_unit: string;
-}
-
-const initialValues: ShipmentFormData = {
-    sender_name: '',
-    sender_street: '',
-    sender_postal_code: '',
-    sender_city: '',
-    sender_country: '',
-    receiver_name: '',
-    receiver_street: '',
-    receiver_postal_code: '',
-    receiver_city: '',
-    receiver_country: '',
-    weight: '',
-    carrier_service_id: '',
-    weight_unit: 'kg', // Default value
-};
-
-
 const countryOptions = ref([]);
 const carrierServiceOptions = ref([]);
 
-
 const senderCountry = ref('');
 const receiverCountry = ref('');
+const carrierService = ref('');
+const weight = ref('');
+const weightUnit = ref('kg');
+
+const price = ref(undefined);
 
 const carrierFieldDisabled = computed(() => Boolean(!senderCountry.value || !receiverCountry.value));
 
@@ -179,9 +153,7 @@ async function getCountryOptions() {
     }
 }
 
-getCountryOptions();
-
-watch([senderCountry, receiverCountry], async ([senderCountryCode, receiverCountryCode]) => {
+async function getCarrierServiceOptions(senderCountryCode: string, receiverCountryCode: string) {
     if (senderCountryCode && receiverCountryCode) {
 
         const urlParams = `source_country_code=${senderCountryCode}&destination_country_code=${receiverCountryCode}`;
@@ -199,8 +171,47 @@ watch([senderCountry, receiverCountry], async ([senderCountryCode, receiverCount
             errorToast();
         }
     }
+}
+
+const calculatePrice = debounce(async () => {
+    if (carrierService.value && weight.value) {
+        try {
+            const response = await fetch('http://localhost:8000/api/pricing/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({
+                    carrier_service_id: carrierService.value,
+                    sender_country_code: senderCountry.value,
+                    receiver_country_code: receiverCountry.value,
+                    weight: weight.value,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                price.value = data.price;
+            } else {
+                console.error('Failed to calculate price:', response.status);
+            }
+        } catch (error) {
+            console.error('Error calculating price:', error);
+        }
+    }
+}, 300); // Debounce delay in milliseconds
+
+
+getCountryOptions();
+
+watch([senderCountry, receiverCountry], ([senderCountryCode, receiverCountryCode]) => {
+    getCarrierServiceOptions(senderCountryCode, receiverCountryCode)
 });
 
+watch([carrierService, weight], () => {
+    calculatePrice();
+});
 
 
 const weightUnits = [
@@ -209,8 +220,8 @@ const weightUnits = [
 ];
 
 const resolver = async ({ values }) => {
-    type Errors = Partial<Record<keyof ShipmentFormData, { message: string }[]>>;
-    const errors: Errors = {};
+
+    const errors: Record<string, { message: string }[]> = {};
 
     // Sender validations
     if (!values.sender_name) errors.sender_name = [{ message: 'Sender name is required.' }];
@@ -228,14 +239,16 @@ const resolver = async ({ values }) => {
 
     // Shipment validations
     if (!values.carrier_service_id) {
-        errors.carrier_service_id = [{ message: 'Carrier Service is required. ' + (carrierFieldDisabled.value ? 'Fill in source and destination adresses first' : '') }];
+        errors.carrier_service_id = [{ message: 'Carrier Service is required. ' + (carrierFieldDisabled.value ? 'Fill in sender and receiver adresses first.' : '') }];
     }
 
     if (!values.weight) {
         errors.weight = [{ message: 'Weight is required.' }];
+        price.value = undefined;
     }
     if (values.weight && values.weight <= 0) {
         errors.weight = [{ message: 'Weight must be positive.' }];
+        price.value = undefined;
     }
     return { errors };
 };

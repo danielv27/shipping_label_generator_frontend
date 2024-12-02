@@ -21,7 +21,16 @@ This project is the frontend application for the Shipping Label Generator. It al
    ```
 3. Run the development server:
    ```bash
-   yarn install
+   yarn dev
    ```
+The application will be accessible at http://localhost:5173
+
+## Usage
+
+1. Fill in the sender and recipient details using the provided form.
+2. Select a carrier service and enter the shipment weight.
+3. View the calculated shipping price dynamically whenever the carrier service and/or weight change.
+4. Submit the form to generate and download a shipping label in PDF format.
+
 
 

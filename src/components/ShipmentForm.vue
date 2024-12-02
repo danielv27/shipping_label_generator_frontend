@@ -310,7 +310,7 @@ async function generateLabel(states) {
             life: 3000,
         });
     }
-    
+
 }
 
 const onFormSubmit = ({ states, valid }) => {

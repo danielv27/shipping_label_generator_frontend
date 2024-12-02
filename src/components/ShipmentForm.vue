@@ -28,7 +28,6 @@
 
                 <Select v-model="senderCountry" filter :options="countryOptions" name="sender_country"
                     placeholder="Country" option-label="label" option-value="value">
-
                     <template #option="slotProps">
                         <div class="flex items-center">
                             <span :class="`fi fi-${slotProps.option.value.toLowerCase()} mr-2`"></span>
@@ -98,7 +97,6 @@
             </div>
             <div class="text-center text-xl" v-if="price">This shipment will cost {{ price }}€</div>
 
-            <!-- Submit Button -->
             <Button type="submit" severity="primary" label="Generate Label" />
         </Form>
     </div>
@@ -293,22 +291,12 @@ async function generateLabel(states) {
                 life: 3000,
             });
         } else {
-            const error = await response.json();
-            toast.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: error.message || 'Failed to generate the label.',
-                life: 3000,
-            });
+            console.error(await response.json());
+            errorToast();
         }
     } catch (error) {
         console.error('Error generating label:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'An unexpected error occurred while generating the label.',
-            life: 3000,
-        });
+        errorToast();
     }
 
 }

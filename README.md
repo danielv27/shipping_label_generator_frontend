@@ -1,6 +1,9 @@
 # Shipping Label Generator Frontend
 
-This project is the frontend application for the Shipping Label Generator. It allows users to input shipment details, calculate shipping prices dynamically, and generate shipping labels in PDF format.
+This project is the frontend application for the [Shipping Label Generator](https://github.com/danielv27/shipping_label_generator).
+This project was build in Vue using the [PrimeVue component library](https://primevue.org)
+
+It allows users to input shipment details, calculate shipping prices dynamically, and generate shipping labels in PDF format.
 
 ## Features
 

@@ -154,7 +154,7 @@ async function getCountryOptions() {
 async function getCarrierServiceOptions(senderCountryCode: string, recipientCountryCode: string) {
     if (senderCountryCode && recipientCountryCode) {
 
-        const urlParams = `source_country_code=${senderCountryCode}&destination_country_code=${recipientCountryCode}`;
+        const urlParams = `sender_country_code=${senderCountryCode}&recipient_country_code=${recipientCountryCode}`;
         try {
             const res = await fetch(`http://localhost:8000/api/carrier-services?${urlParams}`);
             if (res.ok) {

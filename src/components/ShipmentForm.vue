@@ -41,30 +41,30 @@
                 </Message>
             </div>
 
-            <!-- Receiver Information -->
+            <!-- Recipient Information -->
             <div class="flex flex-col gap-1">
-                <h3 class="text-lg font-medium">Receiver Information</h3>
+                <h3 class="text-lg font-medium">Recipient Information</h3>
 
-                <InputText name="receiver_name" type="text" placeholder="Full Name" fluid />
-                <Message v-if="$form['receiver_name']?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form['receiver_name'].error?.message }}
+                <InputText name="recipient_name" type="text" placeholder="Full Name" fluid />
+                <Message v-if="$form['recipient_name']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['recipient_name'].error?.message }}
                 </Message>
 
-                <InputText name="receiver_street" type="text" placeholder="Street" fluid />
-                <Message v-if="$form['receiver_street']?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form['receiver_street'].error?.message }}
+                <InputText name="recipient_street" type="text" placeholder="Street" fluid />
+                <Message v-if="$form['recipient_street']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['recipient_street'].error?.message }}
                 </Message>
 
-                <InputText name="receiver_postal_code" type="text" placeholder="Postal Code" fluid />
-                <Message v-if="$form['receiver_postal_code']?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form['receiver_postal_code'].error?.message }}
+                <InputText name="recipient_postal_code" type="text" placeholder="Postal Code" fluid />
+                <Message v-if="$form['recipient_postal_code']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['recipient_postal_code'].error?.message }}
                 </Message>
 
-                <InputText name="receiver_city" type="text" placeholder="City" fluid />
-                <Message v-if="$form['receiver_city']?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form['receiver_city'].error?.message }}
+                <InputText name="recipient_city" type="text" placeholder="City" fluid />
+                <Message v-if="$form['recipient_city']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['recipient_city'].error?.message }}
                 </Message>
-                <Select v-model="receiverCountry" filter :options="countryOptions" name="receiver_country"
+                <Select v-model="recipientCountry" filter :options="countryOptions" name="recipient_country"
                     placeholder="Country" option-label="label" option-value="value">
                     <template #option="slotProps">
                         <div class="flex items-center">
@@ -73,8 +73,8 @@
                         </div>
                     </template>
                 </Select>
-                <Message v-if="$form['receiver_country']?.invalid" severity="error" size="small" variant="simple">
-                    {{ $form['receiver_country'].error?.message }}
+                <Message v-if="$form['recipient_country']?.invalid" severity="error" size="small" variant="simple">
+                    {{ $form['recipient_country'].error?.message }}
                 </Message>
             </div>
 
@@ -88,7 +88,7 @@
                     {{ $form['carrier_service_id'].error?.message }}
                 </Message>
                 <div class="flex items-center gap-2">
-                    <InputText v-model="weight" name="weight" type="number" placeholder="Weight" fluid />
+                    <InputText v-model.number="weight" name="weight" type="number" placeholder="Weight" fluid />
                     <Select v-model="weightUnit" name="weight_unit" :options="weightUnits" option-label="label"
                         option-value="value" placeholder="Unit" />
                 </div>
@@ -123,14 +123,14 @@ const countryOptions = ref([]);
 const carrierServiceOptions = ref([]);
 
 const senderCountry = ref('');
-const receiverCountry = ref('');
+const recipientCountry = ref('');
 const carrierService = ref('');
-const weight = ref('');
+const weight = ref(undefined);
 const weightUnit = ref('kg');
 
 const price = ref(undefined);
 
-const carrierFieldDisabled = computed(() => Boolean(!senderCountry.value || !receiverCountry.value));
+const carrierFieldDisabled = computed(() => Boolean(!senderCountry.value || !recipientCountry.value));
 
 function errorToast() {
     toast.add({
@@ -153,10 +153,10 @@ async function getCountryOptions() {
     }
 }
 
-async function getCarrierServiceOptions(senderCountryCode: string, receiverCountryCode: string) {
-    if (senderCountryCode && receiverCountryCode) {
+async function getCarrierServiceOptions(senderCountryCode: string, recipientCountryCode: string) {
+    if (senderCountryCode && recipientCountryCode) {
 
-        const urlParams = `source_country_code=${senderCountryCode}&destination_country_code=${receiverCountryCode}`;
+        const urlParams = `source_country_code=${senderCountryCode}&destination_country_code=${recipientCountryCode}`;
         try {
             const res = await fetch(`http://localhost:8000/api/carrier-services?${urlParams}`);
             if (res.ok) {
@@ -173,8 +173,11 @@ async function getCarrierServiceOptions(senderCountryCode: string, receiverCount
     }
 }
 
+// debounce prevents consecutive calls to the same endpoint (once a change is completed (e.g. typing, making selection) it makes a single request to the backend)
 const calculatePrice = debounce(async () => {
     if (carrierService.value && weight.value) {
+        const isKg = weightUnit.value === 'kg';
+        const weightInKgs = isKg ? weight.value : (Math.ceil(weight.value) / 1000);
         try {
             const response = await fetch('http://localhost:8000/api/pricing/calculate', {
                 method: 'POST',
@@ -185,8 +188,8 @@ const calculatePrice = debounce(async () => {
                 body: JSON.stringify({
                     carrier_service_id: carrierService.value,
                     sender_country_code: senderCountry.value,
-                    receiver_country_code: receiverCountry.value,
-                    weight: weight.value,
+                    recipient_country_code: recipientCountry.value,
+                    weight: weightInKgs,
                 }),
             });
 
@@ -205,11 +208,11 @@ const calculatePrice = debounce(async () => {
 
 getCountryOptions();
 
-watch([senderCountry, receiverCountry], ([senderCountryCode, receiverCountryCode]) => {
-    getCarrierServiceOptions(senderCountryCode, receiverCountryCode)
+watch([senderCountry, recipientCountry], ([senderCountryCode, recipientCountryCode]) => {
+    getCarrierServiceOptions(senderCountryCode, recipientCountryCode)
 });
 
-watch([carrierService, weight], () => {
+watch([carrierService, weight, weightUnit], () => {
     calculatePrice();
 });
 
@@ -230,16 +233,16 @@ const resolver = async ({ values }) => {
     if (!values.sender_city) errors.sender_city = [{ message: 'Sender city is required.' }];
     if (!values.sender_country) errors.sender_country = [{ message: 'Sender country is required.' }];
 
-    // Receiver validations
-    if (!values.receiver_name) errors.receiver_name = [{ message: 'Receiver name is required.' }];
-    if (!values.receiver_street) errors.receiver_street = [{ message: 'Receiver street is required.' }];
-    if (!values.receiver_postal_code) errors.receiver_postal_code = [{ message: 'Receiver postal code is required.' }];
-    if (!values.receiver_city) errors.receiver_city = [{ message: 'Receiver city is required.' }];
-    if (!values.receiver_country) errors.receiver_country = [{ message: 'Receiver country is required.' }];
+    // Recipient validations
+    if (!values.recipient_name) errors.recipient_name = [{ message: 'Recipient name is required.' }];
+    if (!values.recipient_street) errors.recipient_street = [{ message: 'Recipient street is required.' }];
+    if (!values.recipient_postal_code) errors.recipient_postal_code = [{ message: 'Recipient postal code is required.' }];
+    if (!values.recipient_city) errors.recipient_city = [{ message: 'Recipient city is required.' }];
+    if (!values.recipient_country) errors.recipient_country = [{ message: 'Recipient country is required.' }];
 
     // Shipment validations
     if (!values.carrier_service_id) {
-        errors.carrier_service_id = [{ message: 'Carrier Service is required. ' + (carrierFieldDisabled.value ? 'Fill in sender and receiver adresses first.' : '') }];
+        errors.carrier_service_id = [{ message: 'Carrier Service is required. ' + (carrierFieldDisabled.value ? 'Fill in sender and recipient adresses first.' : '') }];
     }
 
     if (!values.weight) {
@@ -253,13 +256,66 @@ const resolver = async ({ values }) => {
     return { errors };
 };
 
-const onFormSubmit = ({ states, valid }) => {
-    if (valid) {
+function downloadPdfFromBlob(blob: Blob) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'shipping-label.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+async function generateLabel(states) {
+    try {
+        const response = await fetch('http://localhost:8000/api/label/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/pdf',
+            },
+            body: JSON.stringify({
+                recipient_name: states.recipient_name.value,
+                recipient_street: states.recipient_street.value,
+                recipient_postal_code: states.recipient_postal_code.value,
+                recipient_city: states.recipient_city.value,
+                recipient_country: states.recipient_country.value,
+                carrier_service_id: states.carrier_service_id.value,
+            }),
+        });
+
+        if (response.ok) {
+            downloadPdfFromBlob(await response.blob());
+            toast.add({
+                severity: 'success',
+                summary: 'Label Generated',
+                detail: 'The shipping label was generated successfully.',
+                life: 3000,
+            });
+        } else {
+            const error = await response.json();
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: error.message || 'Failed to generate the label.',
+                life: 3000,
+            });
+        }
+    } catch (error) {
+        console.error('Error generating label:', error);
         toast.add({
-            severity: 'success',
-            summary: 'Details submitted.',
+            severity: 'error',
+            summary: 'Error',
+            detail: 'An unexpected error occurred while generating the label.',
             life: 3000,
         });
+    }
+    
+}
+
+const onFormSubmit = ({ states, valid }) => {
+    if (valid) {
+        generateLabel(states);
     }
 }
 </script>

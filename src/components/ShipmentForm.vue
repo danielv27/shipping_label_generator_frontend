@@ -250,7 +250,7 @@ const resolver = async ({ values }) => {
         price.value = undefined;
     }
     if (values.weight && values.weight <= 0) {
-        errors.weight = [{ message: 'Weight must be positive.' }];
+        errors.weight = [{ message: 'Weight must be greater than 0.' }];
         price.value = undefined;
     }
     return { errors };
